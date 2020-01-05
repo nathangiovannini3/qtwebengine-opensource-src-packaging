@@ -3,7 +3,7 @@
 # Uncomment this to turn on verbose mode.
 #export DH_VERBOSE=1
 export NINJA_PATH=/usr/bin/ninja
-export NINJAFLAGS=-v -j12
+export NINJAFLAGS=-v
 include /usr/share/dpkg/default.mk
 
 DEB_HOST_ARCH_BITS ?= $(shell dpkg-architecture -qDEB_HOST_ARCH_BITS)
@@ -32,30 +32,28 @@ disabled_pch_architectures := amd64 powerpc s390x
 small_architectures := armhf mipsel
 no_gold_architectures := arm64 armhf mipsel
 
-#              -feature-webengine-system-libvpx
-#              -system-ffmpeg
-#              -system-webengine-icu
 config_args = -proprietary-codecs \
+              -feature-webengine-system-libvpx \
+              -system-ffmpeg \
               -system-opus \
               -system-webp \
-              -webengine-extensions 
+              -system-webengine-icu
 
 touch_files = src/3rdparty/chromium/third_party/analytics/google-analytics-bundle.js \
+	      src/3rdparty/chromium/third_party/blink/renderer/devtools/front_end/audits2_worker/lighthouse/lighthouse-background.js \
+	      src/3rdparty/chromium/third_party/blink/renderer/devtools/front_end/diff/diff_match_patch.js \
+	      src/3rdparty/chromium/third_party/blink/renderer/devtools/front_end/formatter_worker/acorn/acorn.js \
+	      src/3rdparty/chromium/third_party/blink/renderer/devtools/front_end/gonzales/gonzales-scss.js \
+	      src/3rdparty/chromium/third_party/blink/renderer/devtools/front_end/network/NetworkConfigView.js \
+	      src/3rdparty/chromium/third_party/blink/renderer/devtools/front_end/settings/EditFileSystemView.js \
+	      src/3rdparty/chromium/third_party/blink/renderer/devtools/front_end/terminal/xterm.js/build/xterm.css \
+	      src/3rdparty/chromium/third_party/blink/renderer/devtools/front_end/terminal/xterm.js/build/xterm.js \
 	      src/3rdparty/chromium/third_party/web-animations-js/sources/web-animations.min.js \
 	      src/3rdparty/chromium/third_party/web-animations-js/sources/web-animations-next-lite.min.js \
-	      src/3rdparty/chromium/third_party/web-animations-js/sources/web-animations-next.min.js \
-	      src/3rdparty/chromium/third_party/WebKit/Source/devtools/front_end/audits2_worker/lighthouse/lighthouse-background.js \
-	      src/3rdparty/chromium/third_party/WebKit/Source/devtools/front_end/diff/diff_match_patch.js \
-	      src/3rdparty/chromium/third_party/WebKit/Source/devtools/front_end/formatter_worker/acorn/acorn.js \
-	      src/3rdparty/chromium/third_party/WebKit/Source/devtools/front_end/gonzales/gonzales-scss.js \
-	      src/3rdparty/chromium/third_party/WebKit/Source/devtools/front_end/network/NetworkConfigView.js \
-	      src/3rdparty/chromium/third_party/WebKit/Source/devtools/front_end/settings/EditFileSystemView.js \
-	      src/3rdparty/chromium/third_party/WebKit/Source/devtools/front_end/terminal/xterm.js/build/xterm.css \
-	      src/3rdparty/chromium/third_party/WebKit/Source/devtools/front_end/terminal/xterm.js/build/xterm.js \
-	      src/3rdparty/chromium/ui/webui/resources/js/jstemplate_compiled.js
+	      src/3rdparty/chromium/third_party/web-animations-js/sources/web-animations-next.min.js
 
 %:
-	dh $@
+	dh $@ --with pkgkde_symbolshelper
 
 override_dh_auto_clean:
 	dh_auto_clean
@@ -79,9 +77,6 @@ override_dh_auto_clean:
 override_dh_auto_configure:
 	# Run qmake once to create .qmake.conf and be sure to append the following values.
 	qmake QT_BUILD_PARTS+=tests QMAKE_EXTRA_ARGS+="$(config_args)"
-	# Rebuild the SyncQt header files
-	rm -rf include/
-	/usr/lib/$(DEB_HOST_MULTIARCH)/qt5/bin/syncqt.pl -version $(DEB_VERSION_UPSTREAM:+dfsg=)
 
 # Enable gstabs debugging symbols only on gstab_architectures.
 ifeq ($(DEB_HOST_ARCH),$(findstring $(DEB_HOST_ARCH), $(gstab_architectures)))
@@ -135,11 +130,6 @@ endif
 
 	# Run qmake again now with the proper values.
 	qmake QT_BUILD_PARTS+=tests QMAKE_EXTRA_ARGS+="$(config_args)"
-
-	# Copy required header files to where they belong (https://bugreports.qt.io/browse/QTBUG-77121)
-	mkdir -p ./include/QtWebEngineCore/5.13.2/QtWebEngineCore/private
-	find . -type f -iname "qtwebenginecore-config.h" -exec cp {} ./include/QtWebEngineCore/5.13.2/QtWebEngineCore/ \;
-	find . -type f -iname "qtwebenginecore-config_p.h" -exec cp {} ./include/QtWebEngineCore/5.13.2/QtWebEngineCore/private/ \;
 
 	# Create js files, that are needed for building step for arch and indep builds
 	cd $(CURDIR)/src/3rdparty/chromium/third_party/jstemplate/; \
